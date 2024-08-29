@@ -8,13 +8,14 @@ export const userSchema = z.object({
       invalid_type_error: "Full name must be a string",
     })
     .min(3, { message: "Full name cannot be an empty string" })
-    .max(100, { message: "username should not be more than 100 characters" }),
+    .max(100, { message: "Full name should not be more than 100 characters" }),
   username: z
     .string({
       required_error: "Username is required",
       invalid_type_error: "Username name must be a string",
     })
-    .min(3, { message: "Username cannot be an empty string" }),
+    .min(3, { message: "Username cannot be an empty string" })
+    .max(50, { message: "Username should not be more than 50 characters" }),
   email: z
     .string()
     .min(1, { message: "Email is required" })
