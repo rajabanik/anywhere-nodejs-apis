@@ -8,6 +8,7 @@ export class UserRegistrations extends Model {
   public full_name!: string;
   public email!: string;
   public is_active!: boolean;
+  UserMiscellaneousDetail: any;
 }
 
 UserRegistrations.init(

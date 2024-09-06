@@ -5,7 +5,8 @@ import { getUserMiscellaneousDetailsById } from "../../controllers/users/userCon
 const userRouter = Router();
 
 userRouter.post("/create-account", createUser);
-userRouter.get('/get-profile-details',getUserMiscellaneousDetailsById);
+
+userRouter.get("/get-profile-details",getUserMiscellaneousDetailsById);
 
 
 export default userRouter;

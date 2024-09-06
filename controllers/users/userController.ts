@@ -58,14 +58,15 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
-export const getUserMiscellaneousDetailsById = async (req: Request,res: Response) => {
+export const getUserMiscellaneousDetailsById = async (req: Request, res: Response) => {
+
   const { userId } = req.query;
 
   if (!userId || typeof userId !== "string") {
-    return res
-      .status(400)
-      .json({ error: "Invalid or missing userId parameter" });
+    return res.status(400).json({ error: "Invalid or missing userId parameter" });
   }
+
+  const transaction = await sequelize.transaction();
   try {
     const user = await UserRegistrations.findOne({
       attributes: [
@@ -83,15 +84,37 @@ export const getUserMiscellaneousDetailsById = async (req: Request,res: Response
         is_active: true,
         user_id: userId,
       },
+      transaction
     });
+
     if (!user) {
+      await transaction.rollback();
       return res.status(404).json({ message: "User not found", status: 404 });
     }
-    return res.status(200).json({ message: "User profile details fetched successfully", data: user, status: 200  });
+
+    await transaction.commit();
+
+    const userData = {
+      userId: user.user_id,
+      username: user.username,
+      fullName: user.full_name,
+      email: user.email,
+      bio: user.UserMiscellaneousDetail?.bio || null,
+      preferences: user.UserMiscellaneousDetail?.preferences || null,
+      age: user.UserMiscellaneousDetail?.age || null,
+      country: user.UserMiscellaneousDetail?.country || null
+    };
+
+    return res.status(200).json({
+      message: "User profile details fetched successfully",
+      data: userData,
+      status: 200
+    });
   } catch (error) {
+    await transaction.rollback();
     res.status(400).json({
       message: "Failed to fetch user profile details",
-      errors: "An unexpected error occurred",
+      errors: error,
       status: 400
     });
   }
