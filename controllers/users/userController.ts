@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ZodError } from "zod";
 import { userSchema } from "../../schemas/users/userSchema";
-import User from "../../models/users/userModel";
+import UserRegistrations from "../../models/users/userRegistrationsModel";
 import { v4 as uuidv4 } from 'uuid';
 import { sequelize } from "../../config/connection";
 
@@ -10,7 +10,7 @@ export const createUser = async (req: Request, res: Response) => {
   try {
     userSchema.parse(req.body);
 
-    const existingUser = await User.findOne({
+    const existingUser = await UserRegistrations.findOne({
       where: {
         email: req.body.email,
         is_active: true
@@ -26,7 +26,7 @@ export const createUser = async (req: Request, res: Response) => {
       });
     }
 
-    await User.create({
+    await UserRegistrations.create({
       user_id: uuidv4().replace(/-/g, ''),
       username: req.body.username,
       full_name: req.body.fullName,
