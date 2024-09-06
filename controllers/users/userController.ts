@@ -3,23 +3,23 @@ import { ZodError } from "zod";
 import { userSchema } from "../../schemas/users/userSchema";
 import User from "../../models/users/userModel";
 import { v4 as uuidv4 } from 'uuid';
-import { sequelize } from "../../config/connection"; 
+import { sequelize } from "../../config/connection";
 
 export const createUser = async (req: Request, res: Response) => {
-  const transaction = await sequelize.transaction(); 
+  const transaction = await sequelize.transaction();
   try {
     userSchema.parse(req.body);
-    
+
     const existingUser = await User.findOne({
       where: {
         email: req.body.email,
         is_active: true
       },
-      transaction  
+      transaction
     });
 
     if (existingUser) {
-      await transaction.rollback(); 
+      await transaction.rollback();
       return res.status(409).json({
         message: "Email already exists",
         status: 409,
@@ -31,13 +31,13 @@ export const createUser = async (req: Request, res: Response) => {
       username: req.body.username,
       full_name: req.body.fullName,
       email: req.body.email
-    }, { transaction });  
-    await transaction.commit();  
+    }, { transaction });
+    await transaction.commit();
 
     res.status(201).json({ message: "User created successfully", status: 201 });
   } catch (error) {
-    await transaction.rollback();  
-    
+    await transaction.rollback();
+
     if (error instanceof ZodError) {
       res.status(400).json({
         message: "Failed to create user",
