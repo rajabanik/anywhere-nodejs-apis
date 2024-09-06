@@ -2,8 +2,9 @@ import { Request, Response } from "express";
 import { ZodError } from "zod";
 import { userSchema } from "../../schemas/users/userSchema";
 import UserRegistrations from "../../models/users/userRegistrationsModel";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 import { sequelize } from "../../config/connection";
+import UserMiscellaneousDetails from "../../models/users/userMiscellaneousDetailsModel";
 
 export const createUser = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
@@ -13,9 +14,9 @@ export const createUser = async (req: Request, res: Response) => {
     const existingUser = await UserRegistrations.findOne({
       where: {
         email: req.body.email,
-        is_active: true
+        is_active: true,
       },
-      transaction
+      transaction,
     });
 
     if (existingUser) {
@@ -26,12 +27,15 @@ export const createUser = async (req: Request, res: Response) => {
       });
     }
 
-    await UserRegistrations.create({
-      user_id: uuidv4().replace(/-/g, ''),
-      username: req.body.username,
-      full_name: req.body.fullName,
-      email: req.body.email
-    }, { transaction });
+    await UserRegistrations.create(
+      {
+        user_id: uuidv4().replace(/-/g, ""),
+        username: req.body.username,
+        full_name: req.body.fullName,
+        email: req.body.email,
+      },
+      { transaction }
+    );
     await transaction.commit();
 
     res.status(201).json({ message: "User created successfully", status: 201 });
@@ -45,11 +49,50 @@ export const createUser = async (req: Request, res: Response) => {
         status: 400,
       });
     } else {
-      console.error("Internal server error:", error);
-      res.status(500).json({
-        message: "Internal server error",
-        errors: { message: "An unexpected error occurred", status: 500 },
+      res.status(400).json({
+        message: "Failed to create user",
+        errors: "An unexpected error occurred",
+        status: 400
       });
     }
+  }
+};
+
+export const getUserMiscellaneousDetailsById = async (req: Request,res: Response) => {
+  const { userId } = req.query;
+
+  if (!userId || typeof userId !== "string") {
+    return res
+      .status(400)
+      .json({ error: "Invalid or missing userId parameter" });
+  }
+  try {
+    const user = await UserRegistrations.findOne({
+      attributes: [
+        'user_id',
+        'username',
+        'full_name',
+        'email',
+      ],
+      include: [{
+        model: UserMiscellaneousDetails,
+        attributes: ['bio', 'preferences', 'age', 'country'],
+        required: false,
+      }],
+      where: {
+        is_active: true,
+        user_id: userId,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found", status: 404 });
+    }
+    return res.status(200).json({ message: "User profile details fetched successfully", data: user, status: 200  });
+  } catch (error) {
+    res.status(400).json({
+      message: "Failed to fetch user profile details",
+      errors: "An unexpected error occurred",
+      status: 400
+    });
   }
 };

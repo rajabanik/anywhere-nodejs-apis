@@ -1,11 +1,13 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../../config/connection";
+import UserMiscellaneousDetails from "./userMiscellaneousDetailsModel";
 
 export class UserRegistrations extends Model {
-  public user_id !: string;
+  public user_id!: string;
   public username!: string;
   public full_name!: string;
   public email!: string;
+  public is_active!: boolean;
 }
 
 UserRegistrations.init(
@@ -48,5 +50,14 @@ UserRegistrations.init(
     timestamps: false,
   }
 );
+
+UserRegistrations.hasOne(UserMiscellaneousDetails, {
+  foreignKey: "user_id",
+  sourceKey: "user_id",
+});
+UserMiscellaneousDetails.belongsTo(UserRegistrations, {
+  foreignKey: "user_id",
+  targetKey: "user_id",
+});
 
 export default UserRegistrations;
