@@ -63,7 +63,7 @@ export const getProfileDetails = async (req: Request, res: Response) => {
   const { userId } = req.query;
 
   if (!userId || typeof userId !== "string") {
-    return res.status(400).json({ error: "Invalid or missing userId parameter" });
+    return res.status(400).json({ message: "Invalid or missing userId parameter", status: 400 });
   }
 
   const transaction = await sequelize.transaction();
