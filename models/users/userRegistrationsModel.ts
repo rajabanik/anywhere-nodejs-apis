@@ -1,5 +1,5 @@
 import { DataTypes, Model } from "sequelize";
-import { sequelize } from "../../config/connection";
+import { sequelize } from "../../configs/dbConnectionConfig";
 import UserMiscellaneousDetails from "./userMiscellaneousDetailsModel";
 
 export class UserRegistrations extends Model {

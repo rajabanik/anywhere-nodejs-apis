@@ -1,10 +1,18 @@
 import { Request, Response } from "express";
 import { ZodError } from "zod";
 import { userSchema } from "../../schemas/users/userSchema";
-import UserRegistrations from "../../models/users/userRegistrationsModel";
 import { v4 as uuidv4 } from "uuid";
-import { sequelize } from "../../config/connection";
+import { firebaseConfig } from "../../configs/firebaseConfig";
+import { initializeApp } from "firebase/app";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, getMetadata } from "firebase/storage";
+import { sequelize } from "../../configs/dbConnectionConfig";
+import UserRegistrations from "../../models/users/userRegistrationsModel";
 import UserMiscellaneousDetails from "../../models/users/userMiscellaneousDetailsModel";
+import { log } from "console";
+
+initializeApp(firebaseConfig);
+
+const storage = getStorage();
 
 export const createUser = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
@@ -38,7 +46,10 @@ export const createUser = async (req: Request, res: Response) => {
     );
     await transaction.commit();
 
-    res.status(201).json({ message: "User created successfully", status: 201 });
+    res.status(201).json({
+      message: "User created successfully",
+      status: 201
+    });
   } catch (error) {
     await transaction.rollback();
 
@@ -51,7 +62,7 @@ export const createUser = async (req: Request, res: Response) => {
     } else {
       res.status(400).json({
         message: "Failed to create user",
-        errors: "An unexpected error occurred",
+        errors: error,
         status: 400
       });
     }
@@ -63,7 +74,10 @@ export const getProfileDetails = async (req: Request, res: Response) => {
   const { userId } = req.query;
 
   if (!userId || typeof userId !== "string") {
-    return res.status(400).json({ message: "Invalid or missing userId parameter", status: 400 });
+    return res.status(400).json({
+      message: "Invalid or missing userId parameter",
+      status: 400
+    });
   }
 
   const transaction = await sequelize.transaction();
@@ -77,7 +91,7 @@ export const getProfileDetails = async (req: Request, res: Response) => {
       ],
       include: [{
         model: UserMiscellaneousDetails,
-        attributes: ["bio", "preferences", "age", "gender", "country"],
+        attributes: ["bio", "preferences", "age", "gender", "country", "profile_photo_storage_bucket_filepath"],
         required: false,
       }],
       where: {
@@ -89,7 +103,10 @@ export const getProfileDetails = async (req: Request, res: Response) => {
 
     if (!user) {
       await transaction.rollback();
-      return res.status(404).json({ message: "User not found", status: 404 });
+      return res.status(404).json({
+        message: "User not found",
+        status: 404
+      });
     }
 
     await transaction.commit();
@@ -103,7 +120,8 @@ export const getProfileDetails = async (req: Request, res: Response) => {
       preferences: user.UserMiscellaneousDetail?.preferences || null,
       age: user.UserMiscellaneousDetail?.age || null,
       gender: user.UserMiscellaneousDetail?.gender || null,
-      country: user.UserMiscellaneousDetail?.country || null
+      country: user.UserMiscellaneousDetail?.country || null,
+      profilePhotoStorageBucketFilepath: user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath || null,
     };
 
     return res.status(200).json({
@@ -115,6 +133,98 @@ export const getProfileDetails = async (req: Request, res: Response) => {
     await transaction.rollback();
     res.status(400).json({
       message: "Failed to fetch user profile details",
+      errors: error,
+      status: 400
+    });
+  }
+};
+
+export const updateProfilePhoto = async (req: Request, res: Response) => {
+
+  const { userId } = req.query;
+
+  if (!userId || typeof userId !== "string") {
+    return res.status(400).json({
+      message: "Invalid or missing userId parameter",
+      status: 400
+    });
+  }
+  if (!req.file || !req.file.buffer) {
+    return res.status(400).json({
+      message: "No file provided or file is empty",
+      status: 400
+    });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const user = await UserRegistrations.findOne({
+      attributes: ["user_id"],
+      include: [{
+        model: UserMiscellaneousDetails,
+        attributes: ["profile_photo_storage_bucket_filepath"],
+        required: false,
+      }],
+      where: {
+        is_active: true,
+        user_id: userId,
+      },
+      transaction
+    });
+
+    if (!user) {
+      await transaction.rollback();
+      return res.status(404).json({
+        message: "User not found",
+        status: 404
+      });
+    }
+
+    const previousFilepath = user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath;
+
+    if (previousFilepath) {
+      const previousFileRef = ref(storage, previousFilepath);
+
+      try {
+        await getMetadata(previousFileRef);
+        await deleteObject(previousFileRef);
+      } catch (error) {
+
+      }
+    }
+
+    const profilePhotoStorageBucketFilepath = `files/users/${user.user_id}/profile-photo/${req.file.originalname}_${uuidv4().replace(/-/g, "")}`;
+    const storageRef = ref(storage, profilePhotoStorageBucketFilepath);
+    const metadata = {
+      contentType: req.file.mimetype
+    };
+    const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    const [affectedRows] = await UserMiscellaneousDetails.update(
+      { profile_photo_storage_bucket_filepath: profilePhotoStorageBucketFilepath },
+      {
+        where: { user_id: userId },
+        transaction
+      }
+    );
+
+    await transaction.commit();
+
+    return res.status(200).json({
+      message: "Profile photo updated successfully",
+      data: {
+        userId: userId,
+        originalFileName: req.file.originalname,
+        fileDownloadURL: downloadURL
+      },
+      status: 200
+    });
+  } catch (error) {
+    await transaction.rollback();
+    res.status(400).json({
+      message: "Failed to update profile photo",
       errors: error,
       status: 400
     });

@@ -1,12 +1,15 @@
 import { Router } from "express";
-import { createUser } from "../../controllers/users/userController";
-import { getProfileDetails } from "../../controllers/users/userController";
+import multer from "multer";
+import { createUser, getProfileDetails, updateProfilePhoto } from "../../controllers/users/userController";
 
-const userRouter = Router();
+const userRouter: Router = Router();
+
+const file = multer({ storage: multer.memoryStorage() });
 
 userRouter.post("/create-account", createUser);
 
 userRouter.get("/get-profile-details",getProfileDetails);
 
+userRouter.post("/update-profile-photo",file.single("file"),updateProfilePhoto);
 
 export default userRouter;

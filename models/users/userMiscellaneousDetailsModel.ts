@@ -1,5 +1,5 @@
 import { DataTypes, Model } from "sequelize";
-import { sequelize } from "../../config/connection";
+import { sequelize } from "../../configs/dbConnectionConfig";
 import UserRegistrations from "./userRegistrationsModel";
 
 export class UserMiscellaneousDetails extends Model {
@@ -10,6 +10,7 @@ export class UserMiscellaneousDetails extends Model {
   public age!: number;
   public gender!: string;
   public country!: string;
+  public profile_photo_storage_bucket_filepath!: string;
 }
 
 UserMiscellaneousDetails.init(
@@ -48,6 +49,10 @@ UserMiscellaneousDetails.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    profile_photo_storage_bucket_filepath: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    }
   },
   {
     sequelize,
