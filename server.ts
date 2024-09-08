@@ -1,7 +1,6 @@
 import express from "express";
 import { conn } from "./config/connection"; 
 import userRouter from "./routes/users/userRouter";
-import flightRouter from "./routes/flights/flightRouter";
 import cors from "cors";
 
 const app = express();
@@ -19,7 +18,6 @@ app.use(express.json());
 app.use(cors(corsOptions));
 
 app.use("/users",userRouter);
-app.use("/flights",flightRouter);
 
 conn().then(() => {
   app.listen(port, () => {
