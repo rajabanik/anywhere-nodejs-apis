@@ -58,7 +58,7 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
-export const getUserMiscellaneousDetailsById = async (req: Request, res: Response) => {
+export const getProfileDetails = async (req: Request, res: Response) => {
 
   const { userId } = req.query;
 
@@ -70,14 +70,14 @@ export const getUserMiscellaneousDetailsById = async (req: Request, res: Respons
   try {
     const user = await UserRegistrations.findOne({
       attributes: [
-        'user_id',
-        'username',
-        'full_name',
-        'email',
+        "user_id",
+        "username",
+        "full_name",
+        "email",
       ],
       include: [{
         model: UserMiscellaneousDetails,
-        attributes: ['bio', 'preferences', 'age', 'country'],
+        attributes: ["bio", "preferences", "age", "gender", "country"],
         required: false,
       }],
       where: {
@@ -102,6 +102,7 @@ export const getUserMiscellaneousDetailsById = async (req: Request, res: Respons
       bio: user.UserMiscellaneousDetail?.bio || null,
       preferences: user.UserMiscellaneousDetail?.preferences || null,
       age: user.UserMiscellaneousDetail?.age || null,
+      gender: user.UserMiscellaneousDetail?.gender || null,
       country: user.UserMiscellaneousDetail?.country || null
     };
 

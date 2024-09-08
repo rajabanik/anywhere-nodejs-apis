@@ -8,6 +8,7 @@ export class UserMiscellaneousDetails extends Model {
   public bio!: string;
   public preferences!: string;
   public age!: number;
+  public gender!: string;
   public country!: string;
 }
 
@@ -15,8 +16,8 @@ UserMiscellaneousDetails.init(
   {
     misc_id: {
       type: DataTypes.INTEGER,
-      autoIncrement: true,
       primaryKey: true,
+      autoIncrement: true,
       allowNull: false,
     },
     user_id: {
@@ -37,6 +38,10 @@ UserMiscellaneousDetails.init(
     },
     age: {
       type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    gender: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
     country: {
