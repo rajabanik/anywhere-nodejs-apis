@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
-import { conn } from "./configs/dbConnectionConfig";
-import userRouter from "./routes/users/userRouter";
+import { conn } from "./configs/db-connection.config";
+import userRouter from "./routes/users/user.route";
 
 const app = express();
 const port = process.env.PORT || 3000;

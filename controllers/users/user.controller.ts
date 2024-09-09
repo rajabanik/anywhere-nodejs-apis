@@ -1,14 +1,13 @@
 import { Request, Response } from "express";
 import { ZodError } from "zod";
-import { userSchema } from "../../schemas/users/userSchema";
+import { createUserSchema } from "../../schemas/users/create-user.schema";
 import { v4 as uuidv4 } from "uuid";
-import { firebaseConfig } from "../../configs/firebaseConfig";
+import { firebaseConfig } from "../../configs/firebase.config";
 import { initializeApp } from "firebase/app";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, getMetadata } from "firebase/storage";
-import { sequelize } from "../../configs/dbConnectionConfig";
-import UserRegistrations from "../../models/users/userRegistrationsModel";
-import UserMiscellaneousDetails from "../../models/users/userMiscellaneousDetailsModel";
-import { log } from "console";
+import { sequelize } from "../../configs/db-connection.config";
+import UserRegistrations from "../../models/users/user-registrations.model";
+import UserMiscellaneousDetails from "../../models/users/user-miscellaneous-details.model";
 
 initializeApp(firebaseConfig);
 
@@ -17,7 +16,7 @@ const storage = getStorage();
 export const createUser = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
   try {
-    userSchema.parse(req.body);
+    createUserSchema.parse(req.body);
 
     const existingUser = await UserRegistrations.findOne({
       where: {
@@ -52,7 +51,6 @@ export const createUser = async (req: Request, res: Response) => {
     });
   } catch (error) {
     await transaction.rollback();
-
     if (error instanceof ZodError) {
       res.status(400).json({
         message: "Failed to create user",
@@ -109,21 +107,27 @@ export const getProfileDetails = async (req: Request, res: Response) => {
       });
     }
 
-    await transaction.commit();
+    let userProfilePhotoDownloadURL = null;
+
+    if (user.UserMiscellaneousDetails.profile_photo_storage_bucket_filepath) {
+      const storageRef = ref(storage, user.UserMiscellaneousDetails.profile_photo_storage_bucket_filepath);
+      userProfilePhotoDownloadURL = await getDownloadURL(storageRef);
+    }
 
     const userData = {
       userId: user.user_id,
       username: user.username,
       fullName: user.full_name,
       email: user.email,
-      bio: user.UserMiscellaneousDetail?.bio || null,
-      preferences: user.UserMiscellaneousDetail?.preferences || null,
-      age: user.UserMiscellaneousDetail?.age || null,
-      gender: user.UserMiscellaneousDetail?.gender || null,
-      country: user.UserMiscellaneousDetail?.country || null,
-      profilePhotoStorageBucketFilepath: user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath || null,
+      bio: user.UserMiscellaneousDetails?.bio || null,
+      preferences: user.UserMiscellaneousDetails?.preferences || null,
+      age: user.UserMiscellaneousDetails?.age || null,
+      gender: user.UserMiscellaneousDetails?.gender || null,
+      country: user.UserMiscellaneousDetails?.country || null,
+      userProfilePhotoDownloadURL: userProfilePhotoDownloadURL,
     };
 
+    await transaction.commit();
     return res.status(200).json({
       message: "User profile details fetched successfully",
       data: userData,
@@ -181,7 +185,7 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
       });
     }
 
-    const previousFilepath = user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath;
+    const previousFilepath = user.UserMiscellaneousDetails?.profile_photo_storage_bucket_filepath;
 
     if (previousFilepath) {
       const previousFileRef = ref(storage, previousFilepath);
@@ -200,7 +204,7 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
       contentType: req.file.mimetype
     };
     const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
-    const downloadURL = await getDownloadURL(snapshot.ref);
+    const userProfilePhotoDownloadURL = await getDownloadURL(snapshot.ref);
 
     const [affectedRows] = await UserMiscellaneousDetails.update(
       { profile_photo_storage_bucket_filepath: profilePhotoStorageBucketFilepath },
@@ -216,8 +220,7 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
       message: "Profile photo updated successfully",
       data: {
         userId: userId,
-        originalFileName: req.file.originalname,
-        fileDownloadURL: downloadURL
+        userProfilePhotoDownloadURL: userProfilePhotoDownloadURL
       },
       status: 200
     });

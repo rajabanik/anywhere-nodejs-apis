@@ -1,7 +1,7 @@
 import { z } from "zod";
 import validator from "validator";
 
-export const userSchema = z.object({
+export const createUserSchema = z.object({
   username: z
     .string({
       required_error: "Username is required",

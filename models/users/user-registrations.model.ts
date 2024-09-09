@@ -1,6 +1,6 @@
 import { DataTypes, Model } from "sequelize";
-import { sequelize } from "../../configs/dbConnectionConfig";
-import UserMiscellaneousDetails from "./userMiscellaneousDetailsModel";
+import { sequelize } from "../../configs/db-connection.config";
+import UserMiscellaneousDetails from "./user-miscellaneous-details.model";
 
 export class UserRegistrations extends Model {
   public user_id!: string;
@@ -8,15 +8,15 @@ export class UserRegistrations extends Model {
   public full_name!: string;
   public email!: string;
   public is_active!: boolean;
-  UserMiscellaneousDetail: any;
+  UserMiscellaneousDetails: any;
 }
 
 UserRegistrations.init(
   {
     user_id: {
       type: DataTypes.STRING,
-      allowNull: false,
       primaryKey: true,
+      allowNull: false,
     },
     username: {
       type: DataTypes.STRING,
@@ -40,8 +40,8 @@ UserRegistrations.init(
     },
     is_active: {
       type: DataTypes.BOOLEAN,
-      allowNull: true,
       defaultValue: true,
+      allowNull: true,
     },
   },
   {

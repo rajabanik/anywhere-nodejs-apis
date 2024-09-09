@@ -1,6 +1,6 @@
 import { DataTypes, Model } from "sequelize";
-import { sequelize } from "../../configs/dbConnectionConfig";
-import UserRegistrations from "./userRegistrationsModel";
+import { sequelize } from "../../configs/db-connection.config";
+import UserRegistrations from "./user-registrations.model";
 
 export class UserMiscellaneousDetails extends Model {
   public misc_id!: number;
@@ -23,11 +23,11 @@ UserMiscellaneousDetails.init(
     },
     user_id: {
       type: DataTypes.STRING,
-      allowNull: false,
       references: {
         model: UserRegistrations,
         key: "user_id",
       },
+      allowNull: false,
     },
     bio: {
       type: DataTypes.STRING,
