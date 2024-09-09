@@ -109,8 +109,8 @@ export const getProfileDetails = async (req: Request, res: Response) => {
 
     let userProfilePhotoDownloadURL = null;
 
-    if (user.UserMiscellaneousDetail.profile_photo_storage_bucket_filepath) {
-      const storageRef = ref(storage, user.UserMiscellaneousDetail.profile_photo_storage_bucket_filepath);
+    if (user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath) {
+      const storageRef = ref(storage, user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath);
       userProfilePhotoDownloadURL = await getDownloadURL(storageRef);
     }
 
@@ -159,12 +159,21 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
       status: 400
     });
   }
+  
+  const allowedMimeTypes = ["image/jpeg", "image/png"];
+  
+  if (!allowedMimeTypes.includes(req.file.mimetype)) {
+    return res.status(400).json({
+      message: "Invalid file type. Only image files are allowed (jpeg, png).",
+      status: 400,
+    });
+  }
 
   const transaction = await sequelize.transaction();
 
   try {
     const user = await UserRegistrations.findOne({
-      attributes: ["user_id"],
+      attributes: ["user_id","username"],
       include: [{
         model: UserMiscellaneousDetails,
         attributes: ["profile_photo_storage_bucket_filepath"],
@@ -185,20 +194,25 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
       });
     }
 
-    const previousFilepath = user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath;
+    const previousFilepath = user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath || null;
 
     if (previousFilepath) {
       const previousFileRef = ref(storage, previousFilepath);
 
       try {
-        await getMetadata(previousFileRef);
-        await deleteObject(previousFileRef);
+        
+        const metadata = await getMetadata(previousFileRef);
+
+        if (metadata) {
+          await deleteObject(previousFileRef);
+        } 
       } catch (error) {
 
       }
     }
 
-    const profilePhotoStorageBucketFilepath = `files/users/${user.user_id}/profile-photo/${req.file.originalname}_${uuidv4().replace(/-/g, "")}`;
+    const fileExtension = req.file.originalname.split(".").pop();
+    const profilePhotoStorageBucketFilepath = `files/users/${userId}/profile-photo/${user.username}_${uuidv4().replace(/-/g, "")}.${fileExtension}`;
     const storageRef = ref(storage, profilePhotoStorageBucketFilepath);
     const metadata = {
       contentType: req.file.mimetype
@@ -206,7 +220,7 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
     const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
     const userProfilePhotoDownloadURL = await getDownloadURL(snapshot.ref);
 
-    const [affectedRows] = await UserMiscellaneousDetails.update(
+    await UserMiscellaneousDetails.update(
       { profile_photo_storage_bucket_filepath: profilePhotoStorageBucketFilepath },
       {
         where: { user_id: userId },

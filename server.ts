@@ -24,7 +24,7 @@ app.use("/users", userRouter);
     await conn();
 
     app.listen(port, () => {
-      console.log(`Server is running on http://localhost:${port}`);
+      console.log(`Server is running on http://127.0.0.1:${port}`);
     });
   } catch (error) {
     console.error('Failed to start application:', error);

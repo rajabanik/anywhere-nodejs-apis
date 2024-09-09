@@ -6,9 +6,9 @@ const userRouter: Router = Router();
 
 const file = multer({ storage: multer.memoryStorage() });
 
-userRouter.post("/create-account", createUser);
-
 userRouter.get("/get-profile-details", getProfileDetails);
+
+userRouter.post("/create-account", createUser);
 
 userRouter.post("/update-profile-photo", file.single("file"), updateProfilePhoto);
 
