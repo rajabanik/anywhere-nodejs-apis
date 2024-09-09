@@ -109,8 +109,8 @@ export const getProfileDetails = async (req: Request, res: Response) => {
 
     let userProfilePhotoDownloadURL = null;
 
-    if (user.UserMiscellaneousDetails.profile_photo_storage_bucket_filepath) {
-      const storageRef = ref(storage, user.UserMiscellaneousDetails.profile_photo_storage_bucket_filepath);
+    if (user.UserMiscellaneousDetail.profile_photo_storage_bucket_filepath) {
+      const storageRef = ref(storage, user.UserMiscellaneousDetail.profile_photo_storage_bucket_filepath);
       userProfilePhotoDownloadURL = await getDownloadURL(storageRef);
     }
 
@@ -119,11 +119,11 @@ export const getProfileDetails = async (req: Request, res: Response) => {
       username: user.username,
       fullName: user.full_name,
       email: user.email,
-      bio: user.UserMiscellaneousDetails?.bio || null,
-      preferences: user.UserMiscellaneousDetails?.preferences || null,
-      age: user.UserMiscellaneousDetails?.age || null,
-      gender: user.UserMiscellaneousDetails?.gender || null,
-      country: user.UserMiscellaneousDetails?.country || null,
+      bio: user.UserMiscellaneousDetail?.bio || null,
+      preferences: user.UserMiscellaneousDetail?.preferences || null,
+      age: user.UserMiscellaneousDetail?.age || null,
+      gender: user.UserMiscellaneousDetail?.gender || null,
+      country: user.UserMiscellaneousDetail?.country || null,
       userProfilePhotoDownloadURL: userProfilePhotoDownloadURL,
     };
 
@@ -185,7 +185,7 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
       });
     }
 
-    const previousFilepath = user.UserMiscellaneousDetails?.profile_photo_storage_bucket_filepath;
+    const previousFilepath = user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath;
 
     if (previousFilepath) {
       const previousFileRef = ref(storage, previousFilepath);
