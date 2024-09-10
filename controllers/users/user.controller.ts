@@ -15,6 +15,7 @@ import {
 import { sequelize } from "../../configs/db-connection.config";
 import UserRegistrations from "../../models/users/user-registrations.model";
 import UserMiscellaneousDetails from "../../models/users/user-miscellaneous-details.model";
+import { log } from "console";
 
 initializeApp(firebaseConfig);
 
@@ -121,9 +122,11 @@ export const getProfileDetails = async (req: Request, res: Response) => {
 
     if (user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath) {
       try {
-        const metadata = await getMetadata(
+        const storageRef = ref(
+          storage,
           user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath
         );
+        const metadata = await getMetadata(storageRef);
         if (metadata) {
           const storageRef = ref(
             storage,
