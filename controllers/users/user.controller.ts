@@ -4,7 +4,14 @@ import { createUserSchema } from "../../schemas/users/create-user.schema";
 import { v4 as uuidv4 } from "uuid";
 import { firebaseConfig } from "../../configs/firebase.config";
 import { initializeApp } from "firebase/app";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, getMetadata } from "firebase/storage";
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject,
+  getMetadata,
+} from "firebase/storage";
 import { sequelize } from "../../configs/db-connection.config";
 import UserRegistrations from "../../models/users/user-registrations.model";
 import UserMiscellaneousDetails from "../../models/users/user-miscellaneous-details.model";
@@ -47,7 +54,7 @@ export const createUser = async (req: Request, res: Response) => {
 
     res.status(201).json({
       message: "User created successfully",
-      status: 201
+      status: 201,
     });
   } catch (error) {
     await transaction.rollback();
@@ -61,57 +68,70 @@ export const createUser = async (req: Request, res: Response) => {
       res.status(400).json({
         message: "Failed to create user",
         errors: error,
-        status: 400
+        status: 400,
       });
     }
   }
 };
 
 export const getProfileDetails = async (req: Request, res: Response) => {
-
   const { userId } = req.query;
 
   if (!userId || typeof userId !== "string") {
     return res.status(400).json({
       message: "Invalid or missing userId parameter",
-      status: 400
+      status: 400,
     });
   }
 
   const transaction = await sequelize.transaction();
   try {
     const user = await UserRegistrations.findOne({
-      attributes: [
-        "user_id",
-        "username",
-        "full_name",
-        "email",
+      attributes: ["user_id", "username", "full_name", "email"],
+      include: [
+        {
+          model: UserMiscellaneousDetails,
+          attributes: [
+            "bio",
+            "preferences",
+            "age",
+            "gender",
+            "country",
+            "profile_photo_storage_bucket_filepath",
+          ],
+          required: false,
+        },
       ],
-      include: [{
-        model: UserMiscellaneousDetails,
-        attributes: ["bio", "preferences", "age", "gender", "country", "profile_photo_storage_bucket_filepath"],
-        required: false,
-      }],
       where: {
         is_active: true,
         user_id: userId,
       },
-      transaction
+      transaction,
     });
 
     if (!user) {
       await transaction.rollback();
       return res.status(404).json({
         message: "User not found",
-        status: 404
+        status: 404,
       });
     }
 
     let userProfilePhotoDownloadURL = null;
 
     if (user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath) {
-      const storageRef = ref(storage, user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath);
-      userProfilePhotoDownloadURL = await getDownloadURL(storageRef);
+      try {
+        const metadata = await getMetadata(
+          user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath
+        );
+        if (metadata) {
+          const storageRef = ref(
+            storage,
+            user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath
+          );
+          userProfilePhotoDownloadURL = await getDownloadURL(storageRef);
+        }
+      } catch (error) {}
     }
 
     const userData = {
@@ -131,37 +151,36 @@ export const getProfileDetails = async (req: Request, res: Response) => {
     return res.status(200).json({
       message: "User profile details fetched successfully",
       data: userData,
-      status: 200
+      status: 200,
     });
   } catch (error) {
     await transaction.rollback();
     res.status(400).json({
       message: "Failed to fetch user profile details",
       errors: error,
-      status: 400
+      status: 400,
     });
   }
 };
 
 export const updateProfilePhoto = async (req: Request, res: Response) => {
-
   const { userId } = req.query;
 
   if (!userId || typeof userId !== "string") {
     return res.status(400).json({
       message: "Invalid or missing userId parameter",
-      status: 400
+      status: 400,
     });
   }
   if (!req.file || !req.file.buffer) {
     return res.status(400).json({
       message: "No file provided or file is empty",
-      status: 400
+      status: 400,
     });
   }
-  
+
   const allowedMimeTypes = ["image/jpeg", "image/png"];
-  
+
   if (!allowedMimeTypes.includes(req.file.mimetype)) {
     return res.status(400).json({
       message: "Invalid file type. Only image files are allowed (jpeg, png).",
@@ -173,58 +192,68 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
 
   try {
     const user = await UserRegistrations.findOne({
-      attributes: ["user_id","username"],
-      include: [{
-        model: UserMiscellaneousDetails,
-        attributes: ["profile_photo_storage_bucket_filepath"],
-        required: false,
-      }],
+      attributes: ["user_id", "username"],
+      include: [
+        {
+          model: UserMiscellaneousDetails,
+          attributes: ["profile_photo_storage_bucket_filepath"],
+          required: false,
+        },
+      ],
       where: {
         is_active: true,
         user_id: userId,
       },
-      transaction
+      transaction,
     });
 
     if (!user) {
       await transaction.rollback();
       return res.status(404).json({
         message: "User not found",
-        status: 404
+        status: 404,
       });
     }
 
-    const previousFilepath = user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath || null;
+    const previousFilepath =
+      user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath ||
+      null;
 
     if (previousFilepath) {
       const previousFileRef = ref(storage, previousFilepath);
 
       try {
-        
         const metadata = await getMetadata(previousFileRef);
 
         if (metadata) {
           await deleteObject(previousFileRef);
-        } 
-      } catch (error) {
-
-      }
+        }
+      } catch (error) {}
     }
 
     const fileExtension = req.file.originalname.split(".").pop();
-    const profilePhotoStorageBucketFilepath = `files/users/${userId}/profile-photo/${user.username}_${uuidv4().replace(/-/g, "")}.${fileExtension}`;
+    const profilePhotoStorageBucketFilepath = `files/users/${userId}/profile-photo/${
+      user.username
+    }_${uuidv4().replace(/-/g, "")}.${fileExtension}`;
     const storageRef = ref(storage, profilePhotoStorageBucketFilepath);
     const metadata = {
-      contentType: req.file.mimetype
+      contentType: req.file.mimetype,
     };
-    const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
+    const snapshot = await uploadBytesResumable(
+      storageRef,
+      req.file.buffer,
+      metadata
+    );
     const userProfilePhotoDownloadURL = await getDownloadURL(snapshot.ref);
 
     await UserMiscellaneousDetails.update(
-      { profile_photo_storage_bucket_filepath: profilePhotoStorageBucketFilepath },
+      {
+        profile_photo_storage_bucket_filepath:
+          profilePhotoStorageBucketFilepath,
+      },
       {
         where: { user_id: userId },
-        transaction
+        transaction,
       }
     );
 
@@ -234,16 +263,16 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
       message: "Profile photo updated successfully",
       data: {
         userId: userId,
-        userProfilePhotoDownloadURL: userProfilePhotoDownloadURL
+        userProfilePhotoDownloadURL: userProfilePhotoDownloadURL,
       },
-      status: 200
+      status: 200,
     });
   } catch (error) {
     await transaction.rollback();
     res.status(400).json({
       message: "Failed to update profile photo",
       errors: error,
-      status: 400
+      status: 400,
     });
   }
 };

@@ -52,7 +52,7 @@ UserMiscellaneousDetails.init(
     profile_photo_storage_bucket_filepath: {
       type: DataTypes.STRING,
       allowNull: true,
-    }
+    },
   },
   {
     sequelize,

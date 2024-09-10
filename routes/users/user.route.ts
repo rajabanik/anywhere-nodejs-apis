@@ -1,6 +1,10 @@
 import { Router } from "express";
 import multer from "multer";
-import { createUser, getProfileDetails, updateProfilePhoto } from "../../controllers/users/user.controller";
+import {
+  createUser,
+  getProfileDetails,
+  updateProfilePhoto,
+} from "../../controllers/users/user.controller";
 
 const userRouter: Router = Router();
 

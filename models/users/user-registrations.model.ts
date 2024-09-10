@@ -32,6 +32,7 @@ UserRegistrations.init(
     },
     creation_date: {
       type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
       allowNull: true,
     },
     deactivation_date: {
