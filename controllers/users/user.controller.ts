@@ -15,7 +15,6 @@ import {
 import { sequelize } from "../../configs/db-connection.config";
 import UserRegistrations from "../../models/users/user-registrations.model";
 import UserMiscellaneousDetails from "../../models/users/user-miscellaneous-details.model";
-import { log } from "console";
 
 initializeApp(firebaseConfig);
 
