@@ -72,6 +72,7 @@ export const createUser = async (req: Request, res: Response) => {
       status: 201,
     });
   } catch (error) {
+    console.log(error);
     await transaction.rollback();
     if (error instanceof ZodError) {
       res.status(400).json({
@@ -147,7 +148,9 @@ export const getProfileDetails = async (req: Request, res: Response) => {
           );
           userProfilePhotoDownloadURL = await getDownloadURL(storageRef);
         }
-      } catch (error) { }
+      } catch (error) { 
+        console.log(error);
+      }
     }
 
     const userData = {
@@ -170,6 +173,7 @@ export const getProfileDetails = async (req: Request, res: Response) => {
       status: 200,
     });
   } catch (error) {
+    console.log(error);
     await transaction.rollback();
     res.status(400).json({
       message: "Failed to fetch user profile details",
@@ -244,7 +248,9 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
         if (metadata) {
           await deleteObject(previousFileRef);
         }
-      } catch (error) { }
+      } catch (error) {
+        console.log(error);
+      }
     }
 
     const fileExtension = req.file.originalname.split(".").pop();
@@ -283,6 +289,7 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
       status: 200,
     });
   } catch (error) {
+    console.log(error);
     await transaction.rollback();
     res.status(400).json({
       message: "Failed to update profile photo",
