@@ -25,7 +25,22 @@ export const createUser = async (req: Request, res: Response) => {
   try {
     createUserSchema.parse(req.body);
 
-    const existingUser = await UserRegistrations.findOne({
+    const existingUserByUsername = await UserRegistrations.findOne({
+      where: {
+        username: req.body.username,
+        is_active: true,
+      },
+      transaction,
+    });
+
+    if (existingUserByUsername) {
+      await transaction.rollback();
+      return res.status(409).json({
+        message: "Username already taken",
+        status: 409,
+      });
+    }
+    const existingUserByEmail = await UserRegistrations.findOne({
       where: {
         email: req.body.email,
         is_active: true,
@@ -33,7 +48,7 @@ export const createUser = async (req: Request, res: Response) => {
       transaction,
     });
 
-    if (existingUser) {
+    if (existingUserByEmail) {
       await transaction.rollback();
       return res.status(409).json({
         message: "Email already exists",
@@ -60,15 +75,14 @@ export const createUser = async (req: Request, res: Response) => {
     await transaction.rollback();
     if (error instanceof ZodError) {
       res.status(400).json({
-        message: "Failed to create user",
-        errors: error.errors,
-        status: 400,
+        message: error.errors[0].message,
+        status: 400
       });
     } else {
       res.status(400).json({
         message: "Failed to create user",
         errors: error,
-        status: 400,
+        status: 400
       });
     }
   }
@@ -133,7 +147,7 @@ export const getProfileDetails = async (req: Request, res: Response) => {
           );
           userProfilePhotoDownloadURL = await getDownloadURL(storageRef);
         }
-      } catch (error) {}
+      } catch (error) { }
     }
 
     const userData = {
@@ -230,13 +244,12 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
         if (metadata) {
           await deleteObject(previousFileRef);
         }
-      } catch (error) {}
+      } catch (error) { }
     }
 
     const fileExtension = req.file.originalname.split(".").pop();
-    const profilePhotoStorageBucketFilepath = `files/users/${userId}/profile-photo/${
-      user.username
-    }_${uuidv4().replace(/-/g, "")}.${fileExtension}`;
+    const profilePhotoStorageBucketFilepath = `files/users/${userId}/profile-photo/${user.username
+      }_${uuidv4().replace(/-/g, "")}.${fileExtension}`;
     const storageRef = ref(storage, profilePhotoStorageBucketFilepath);
     const metadata = {
       contentType: req.file.mimetype,

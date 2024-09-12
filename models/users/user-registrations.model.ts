@@ -1,6 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../../configs/db-connection.config";
 import UserMiscellaneousDetails from "./user-miscellaneous-details.model";
+import { getCurrentDateTimeUTC } from "../../utils/datetime.util";
 
 export class UserRegistrations extends Model {
   public user_id!: string;
@@ -20,6 +21,7 @@ UserRegistrations.init(
     },
     username: {
       type: DataTypes.STRING,
+      unique: true,
       allowNull: false,
     },
     full_name: {
@@ -28,11 +30,12 @@ UserRegistrations.init(
     },
     email: {
       type: DataTypes.STRING,
+      unique: true,
       allowNull: false,
     },
     creation_date: {
       type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
+      defaultValue: getCurrentDateTimeUTC(),
       allowNull: true,
     },
     deactivation_date: {
