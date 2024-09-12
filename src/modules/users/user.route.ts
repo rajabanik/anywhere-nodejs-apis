@@ -4,7 +4,7 @@ import {
   createUser,
   getProfileDetails,
   updateProfilePhoto,
-} from "../../controllers/users/user.controller";
+} from "./user.controller";
 
 const userRouter: Router = Router();
 
