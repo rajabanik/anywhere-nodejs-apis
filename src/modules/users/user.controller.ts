@@ -58,7 +58,7 @@ export const createUser = async (req: Request, res: Response) => {
 
     await UserRegistrations.create(
       {
-        user_id: uuidv4().replace(/-/g, ""),
+        user_id: "user_"+uuidv4().replace(/-/g, ""),
         username: req.body.username,
         full_name: req.body.fullName,
         email: req.body.email,
