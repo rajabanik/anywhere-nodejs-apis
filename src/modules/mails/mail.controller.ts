@@ -5,7 +5,6 @@ import { ZodError } from "zod";
 import dotenv from "dotenv";
 
 dotenv.config();
-
 export class MailController {
 
     constructor() { }
