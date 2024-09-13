@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import { conn } from "./src/configs/db-connection.config";
 import userRouter from "./src/modules/users/user.route";
+import mailRouter from "./src/modules/mails/mail.route";
+import otpRouter from "./src/modules/otp/otp.route";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,7 +19,9 @@ app.use(express.json());
 
 app.use(cors(corsOptions));
 
-app.use("/users", userRouter);
+app.use("/user", userRouter);
+app.use("/mail", mailRouter);
+app.use("/otp", otpRouter);
 
 (async () => {
   try {

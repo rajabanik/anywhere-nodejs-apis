@@ -67,7 +67,7 @@ export const createUser = async (req: Request, res: Response) => {
     );
     await transaction.commit();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "User created successfully",
       status: 201,
     });
@@ -75,12 +75,12 @@ export const createUser = async (req: Request, res: Response) => {
     console.log(error);
     await transaction.rollback();
     if (error instanceof ZodError) {
-      res.status(400).json({
+      return res.status(400).json({
         message: error.errors[0].message,
         status: 400
       });
     } else {
-      res.status(400).json({
+      return res.status(400).json({
         message: "Failed to create user",
         errors: error,
         status: 400
@@ -175,7 +175,7 @@ export const getProfileDetails = async (req: Request, res: Response) => {
   } catch (error) {
     console.log(error);
     await transaction.rollback();
-    res.status(400).json({
+    return res.status(400).json({
       message: "Failed to fetch user profile details",
       errors: error,
       status: 400,
@@ -291,7 +291,7 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
   } catch (error) {
     console.log(error);
     await transaction.rollback();
-    res.status(400).json({
+    return res.status(400).json({
       message: "Failed to update profile photo",
       errors: error,
       status: 400,
