@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { ZodError } from "zod";
 import { createUserSchema } from "../../schemas/users/create-user.schema";
+import { loginSchema } from "../../schemas/users/login.schema";
 import { v4 as uuidv4 } from "uuid";
 import { firebaseConfig } from "../../configs/firebase.config";
 import { initializeApp } from "firebase/app";
@@ -15,6 +16,7 @@ import {
 import { sequelize } from "../../configs/db-connection.config";
 import UserRegistrations from "../../models/users/user-registrations.model";
 import UserMiscellaneousDetails from "../../models/users/user-miscellaneous-details.model";
+import validator from "validator";
 
 initializeApp(firebaseConfig);
 
@@ -58,7 +60,7 @@ export const createUser = async (req: Request, res: Response) => {
 
     await UserRegistrations.create(
       {
-        user_id: "user_"+uuidv4().replace(/-/g, ""),
+        user_id: "user_" + uuidv4().replace(/-/g, ""),
         username: req.body.username,
         full_name: req.body.fullName,
         email: req.body.email,
@@ -77,13 +79,13 @@ export const createUser = async (req: Request, res: Response) => {
     if (error instanceof ZodError) {
       res.status(400).json({
         message: error.errors[0].message,
-        status: 400
+        status: 400,
       });
     } else {
       res.status(400).json({
         message: "Failed to create user",
         errors: error,
-        status: 400
+        status: 400,
       });
     }
   }
@@ -148,7 +150,7 @@ export const getProfileDetails = async (req: Request, res: Response) => {
           );
           userProfilePhotoDownloadURL = await getDownloadURL(storageRef);
         }
-      } catch (error) { 
+      } catch (error) {
         console.log(error);
       }
     }
@@ -254,8 +256,9 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
     }
 
     const fileExtension = req.file.originalname.split(".").pop();
-    const profilePhotoStorageBucketFilepath = `files/users/${userId}/profile-photo/${user.username
-      }_${uuidv4().replace(/-/g, "")}.${fileExtension}`;
+    const profilePhotoStorageBucketFilepath = `files/users/${userId}/profile-photo/${
+      user.username
+    }_${uuidv4().replace(/-/g, "")}.${fileExtension}`;
     const storageRef = ref(storage, profilePhotoStorageBucketFilepath);
     const metadata = {
       contentType: req.file.mimetype,
@@ -296,5 +299,60 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
       errors: error,
       status: 400,
     });
+  }
+};
+
+export const userLogin = async (req: Request, res: Response) => {
+  
+  const { email } = req.body;
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    loginSchema.parse(req.body);
+
+    const existingUser = await UserRegistrations.findOne({
+      where: {
+        email: email,
+        is_active: true,
+      },
+      transaction,
+    });
+
+    if (!existingUser) {
+      await transaction.rollback();
+      return res.status(404).json({
+        message: "User not found",
+        status: 404,
+      });
+    }
+
+    await transaction.commit();
+    return res.status(200).json({
+      message: "User found",
+      data: {
+        userId: existingUser.user_id,
+        username: existingUser.username,
+        fullName: existingUser.full_name,
+        email: existingUser.email,
+      },
+      status: 200,
+    });
+
+  } catch (error) {
+    console.log(error);
+    await transaction.rollback();
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        message: error.errors[0].message,
+        status: 400,
+      });
+    } else {
+      return res.status(400).json({
+        message: "An unexpected error occurred",
+        error: error,
+        status: 400,
+      });
+    }
   }
 };
