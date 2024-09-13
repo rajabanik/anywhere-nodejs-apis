@@ -33,12 +33,12 @@ UserRegistrations.init(
       unique: true,
       allowNull: false,
     },
-    creation_date: {
+    created_on: {
       type: DataTypes.DATE,
       defaultValue: getCurrentDateTimeUTC(),
       allowNull: true,
     },
-    deactivation_date: {
+    deactivated_on: {
       type: DataTypes.DATE,
       allowNull: true,
     },
