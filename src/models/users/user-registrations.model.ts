@@ -21,7 +21,6 @@ UserRegistrations.init(
     },
     username: {
       type: DataTypes.STRING,
-      unique: true,
       allowNull: false,
     },
     full_name: {
@@ -30,13 +29,12 @@ UserRegistrations.init(
     },
     email: {
       type: DataTypes.STRING,
-      unique: true,
       allowNull: false,
     },
     created_on: {
       type: DataTypes.DATE,
       defaultValue: getCurrentDateTimeUTC(),
-      allowNull: true,
+      allowNull: false,
     },
     deactivated_on: {
       type: DataTypes.DATE,
@@ -45,7 +43,7 @@ UserRegistrations.init(
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
-      allowNull: true,
+      allowNull: false,
     },
   },
   {
