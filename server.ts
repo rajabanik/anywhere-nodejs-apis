@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import { conn } from "./src/configs/db-connection.config";
 import userRouter from "./src/modules/users/user.route";
-import tripRouter from "./src/modules/trips/trip.route";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -19,8 +18,6 @@ app.use(express.json());
 app.use(cors(corsOptions));
 
 app.use("/users", userRouter);
-
-app.use("/trips", tripRouter);
 
 (async () => {
   try {
