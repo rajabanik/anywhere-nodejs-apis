@@ -76,14 +76,14 @@ export class OtpController {
   }
 
   async updateOtpStatus(req: Request, res: Response) {
-    const { otpId } = req.body;
+    const { otpId, status } = req.body;
     const transaction = await sequelize.transaction();
 
     try {
       updateOtpStatusSchema.parse(req.body);
       await OtpLogs.update(
         {
-          status: "INVALID",
+          status: status,
         },
         {
           where: {
