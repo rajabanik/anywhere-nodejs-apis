@@ -13,12 +13,12 @@ export class OtpController {
   constructor() { }
 
   async sendOtp(req: Request, res: Response) {
-    const { userId } = req.body;
     const otp = generateOtp();
     const transaction = await sequelize.transaction();
 
     try {
-      sendOtpSchema.parse(req.body);
+      const validatedBody = sendOtpSchema.parse(req.body);
+      const { userId } = validatedBody;
       const response = await fetch("http://127.0.0.1:3000/mail/send-email", {
         method: "POST",
         headers: {
@@ -76,11 +76,11 @@ export class OtpController {
   }
 
   async updateOtpStatus(req: Request, res: Response) {
-    const { otpId, status } = req.body;
     const transaction = await sequelize.transaction();
 
     try {
-      updateOtpStatusSchema.parse(req.body);
+      const validatedBody = updateOtpStatusSchema.parse(req.body);
+      const { otpId, status } = validatedBody;
       await OtpLogs.update(
         {
           status: status,

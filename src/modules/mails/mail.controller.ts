@@ -32,7 +32,6 @@ export class MailController {
                 html: body?.html,
                 attachments: processedAttachments,
             });
-            console.log(info);
             return res.status(200).json({
                 message: "Email sent successfully",
                 status: 200

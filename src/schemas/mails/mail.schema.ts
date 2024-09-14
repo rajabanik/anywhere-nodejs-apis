@@ -33,30 +33,30 @@ export const mailSchema = z.object({
     ]).optional(),
 
     subject: z.string({
-        required_error: "Subject is required.",
-        invalid_type_error: "Subject must be a string.",
-    }).min(1, { message: "Subject cannot be empty." }),
+        required_error: "subject is required.",
+        invalid_type_error: "subject must be a string.",
+    }).min(1, { message: "subject cannot be empty." }),
 
     body: z.object({
-        text: z.string().min(1, { message: "Text body must be a non-empty string." }).optional(),
+        text: z.string().min(1, { message: "text body must be a non-empty string." }).optional(),
         html: z.string().optional(),
     }).refine(data => data.text || data.html, {
         message: "At least one body format (text or html) is required.",
     }).optional()
         .refine(body => body !== undefined, {
-            message: "Body is required."
+            message: "body is required."
         }),
 
     attachments: z.array(
         z.object({
             filename: z.string({
-                required_error: "Filename is required for attachment.",
-                invalid_type_error: "Filename must be a string.",
-            }).min(1, { message: "Filename cannot be empty." }),
+                required_error: "filename is required for attachment.",
+                invalid_type_error: "filename must be a string.",
+            }).min(1, { message: "filename cannot be empty." }),
             path: z.string({
-                required_error: "Path is required for attachment.",
-                invalid_type_error: "Path must be a string.",
-            }).min(1, { message: "Path cannot be empty." }),
+                required_error: "path is required for attachment.",
+                invalid_type_error: "path must be a string.",
+            }).min(1, { message: "path cannot be empty." }),
         })
     ).optional(),
 });
