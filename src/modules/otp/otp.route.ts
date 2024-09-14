@@ -9,4 +9,6 @@ otpRouter.post("/send-otp", otpController.sendOtp);
 
 otpRouter.post("/update-otp-status", otpController.updateOtpStatus);
 
+otpRouter.post("/verify-otp", otpController.verifyOtp);
+
 export default otpRouter;

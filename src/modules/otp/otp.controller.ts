@@ -1,12 +1,16 @@
-import { Request, Response } from 'express';
-import { ZodError } from 'zod';
+import { Request, Response } from "express";
+import { ZodError } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import dotenv from "dotenv";
 import { sequelize } from "../../configs/db-connection.config";
 import { generateOtp } from "../../utils/otp.util";
-import { getCurrentDateTimeUTC } from '../../utils/datetime.util';
-import { sendOtpSchema } from '../../schemas/otp/send-otp.schema';
-import { updateOtpStatusSchema } from '../../schemas/otp/update-otp-status.schema';
-import OtpLogs from '../../models/otp/otp-logs.model';
+import { getCurrentDateTimeUTC } from "../../utils/datetime.util";
+import { sendOtpSchema } from "../../schemas/otp/send-otp.schema";
+import { updateOtpStatusSchema } from "../../schemas/otp/update-otp-status.schema";
+import { verifyOtpSchema } from "../../schemas/otp/verify-otp.schema";
+import OtpLogs from "../../models/otp/otp-logs.model";
+
+dotenv.config();
 
 export class OtpController {
 
@@ -14,12 +18,13 @@ export class OtpController {
 
   async sendOtp(req: Request, res: Response) {
     const otp = generateOtp();
+    const otpId = "otp_" + uuidv4().replace(/-/g, "");
     const transaction = await sequelize.transaction();
 
     try {
       const validatedBody = sendOtpSchema.parse(req.body);
       const { userId } = validatedBody;
-      const response = await fetch("http://127.0.0.1:3000/mail/send-email", {
+      const response = await fetch(`${process.env.NODEJS_API_BASE_URL}/mail/send-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -38,7 +43,7 @@ export class OtpController {
       if (sendMailApiResponse.status == 200) {
         await OtpLogs.create(
           {
-            otp_id: "otp_" + uuidv4().replace(/-/g, ""),
+            otp_id: otpId,
             user_id: userId,
             otp: otp,
             status: "PENDING",
@@ -49,6 +54,11 @@ export class OtpController {
         await transaction.commit();
         return res.status(200).json({
           message: "OTP sent successfully",
+          data: {
+            otpId: otpId,
+            userId: userId,
+            status: "PENDING"
+          },
           status: 200
         });
       } else {
@@ -81,6 +91,22 @@ export class OtpController {
     try {
       const validatedBody = updateOtpStatusSchema.parse(req.body);
       const { otpId, status } = validatedBody;
+
+      const existingOtpId = await OtpLogs.findOne({
+        where: {
+          otp_id: otpId,
+        },
+        transaction,
+      });
+
+      if (!existingOtpId) {
+        await transaction.rollback();
+        return res.status(400).json({
+          message: "otpId not found",
+          status: 400,
+        });
+      }
+
       await OtpLogs.update(
         {
           status: status,
@@ -115,4 +141,94 @@ export class OtpController {
     }
   }
 
+  async verifyOtp(req: Request, res: Response) {
+    const transaction = await sequelize.transaction();
+
+    try {
+      const validatedBody = verifyOtpSchema.parse(req.body);
+      const { userId, otp } = validatedBody;
+
+      const existingOtpLog = await OtpLogs.findOne({
+        where: {
+          user_id: userId,
+        },
+        order: [["generated_on", "DESC"]],
+        limit: 1,
+        transaction,
+      });
+
+      if (!existingOtpLog) {
+        await transaction.rollback();
+        return res.status(400).json({
+          message: "OTP log not found",
+          status: 400,
+        });
+      }
+
+      if (existingOtpLog.otp !== otp) {
+        await OtpLogs.update(
+          {
+            status: "UNVERIFIED"
+          },
+          {
+            where:
+            {
+              otp_id: existingOtpLog.otp_id
+            },
+            transaction
+          }
+        );
+        await transaction.commit();
+        return res.status(400).json({
+          message: "Invalid OTP",
+          status: 400,
+        });
+      }
+
+      if (existingOtpLog.status === "EXPIRED") {
+        await transaction.rollback();
+        return res.status(400).json({
+          message: "OTP has expired",
+          status: 400,
+        });
+      }
+
+      await OtpLogs.update(
+        {
+          status: "VERIFIED"
+        },
+        {
+          where:
+          {
+            otp_id: existingOtpLog.otp_id
+          },
+          transaction
+        }
+      );
+      await transaction.commit();
+      return res.status(200).json({
+        message: "OTP verified successfully",
+        data: {
+          otpId: existingOtpLog.otp_id,
+          userId: existingOtpLog.user_id,
+          status: "VERIFIED"
+        },
+        status: 200
+      });
+    } catch (error) {
+      console.log(error);
+      await transaction.rollback();
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          message: error.errors[0].message,
+          status: 400
+        });
+      }
+      return res.status(400).json({
+        message: "Failed to update OTP status",
+        errors: error,
+        status: 400
+      });
+    }
+  }
 }
