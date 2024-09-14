@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { ZodError } from 'zod';
-import { sequelize } from "../../configs/db-connection.config";
 import { v4 as uuidv4 } from "uuid";
+import { sequelize } from "../../configs/db-connection.config";
 import { generateOtp } from "../../utils/otp.util";
 import { getCurrentDateTimeUTC } from '../../utils/datetime.util';
 import { sendOtpSchema } from '../../schemas/otp/send-otp.schema';
+import { updateOtpStatusSchema } from '../../schemas/otp/update-otp-status.schema';
 import OtpLogs from '../../models/otp/otp-logs.model';
 
 export class OtpController {
@@ -12,12 +13,12 @@ export class OtpController {
   constructor() { }
 
   async sendOtp(req: Request, res: Response) {
+    const { userId } = req.body;
     const otp = generateOtp();
     const transaction = await sequelize.transaction();
 
     try {
       sendOtpSchema.parse(req.body);
-
       const response = await fetch("http://127.0.0.1:3000/mail/send-email", {
         method: "POST",
         headers: {
@@ -34,12 +35,11 @@ export class OtpController {
       });
 
       const sendMailApiResponse = await response.json();
-
-      if (response.ok) {
+      if (sendMailApiResponse.status == 200) {
         await OtpLogs.create(
           {
             otp_id: "otp_" + uuidv4().replace(/-/g, ""),
-            user_id: req.body.userId,
+            user_id: userId,
             otp: otp,
             status: "PENDING",
             generated_on: getCurrentDateTimeUTC()
@@ -59,8 +59,8 @@ export class OtpController {
         });
       }
     } catch (error) {
-      await transaction.rollback();
       console.error(error);
+      await transaction.rollback();
       if (error instanceof ZodError) {
         return res.status(400).json({
           message: error.errors[0].message,
@@ -74,4 +74,45 @@ export class OtpController {
       });
     }
   }
+
+  async updateOtpStatus(req: Request, res: Response) {
+    const { otpId } = req.body;
+    const transaction = await sequelize.transaction();
+
+    try {
+      updateOtpStatusSchema.parse(req.body);
+      await OtpLogs.update(
+        {
+          status: "INVALID",
+        },
+        {
+          where: {
+            otp_id: otpId,
+            status: "PENDING"
+          },
+          transaction,
+        }
+      );
+      await transaction.commit();
+      return res.status(200).json({
+        message: "OTP status updated successfully",
+        status: 200
+      });
+    } catch (error) {
+      console.log(error);
+      await transaction.rollback();
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          message: error.errors[0].message,
+          status: 400
+        });
+      }
+      return res.status(400).json({
+        message: "Failed to update OTP status",
+        errors: error,
+        status: 400
+      });
+    }
+  }
+
 }
