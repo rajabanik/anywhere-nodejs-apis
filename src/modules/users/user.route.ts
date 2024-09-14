@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import {
-  createUser,
+  userAccountCreation,
   getProfileDetails,
   updateProfilePhoto,
   userLogin
@@ -13,7 +13,7 @@ const file = multer({ storage: multer.memoryStorage() });
 
 userRouter.get("/get-profile-details", getProfileDetails);
 
-userRouter.post("/create-account", createUser);
+userRouter.post("/create-account", userAccountCreation);
 
 userRouter.post("/update-profile-photo", file.single("file"), updateProfilePhoto);
 

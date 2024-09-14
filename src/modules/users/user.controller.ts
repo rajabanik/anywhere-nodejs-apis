@@ -22,7 +22,7 @@ initializeApp(firebaseConfig);
 
 const storage = getStorage();
 
-export const createUser = async (req: Request, res: Response) => {
+export const userAccountCreation = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
   try {
     createUserSchema.parse(req.body);

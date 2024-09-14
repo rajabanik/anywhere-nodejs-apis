@@ -12,12 +12,10 @@ export class OtpController {
   constructor() { }
 
   async sendOtp(req: Request, res: Response) {
-
     const otp = generateOtp();
     const transaction = await sequelize.transaction();
 
     try {
-
       sendOtpSchema.parse(req.body);
 
       const response = await fetch("http://127.0.0.1:3000/mail/send-email", {
@@ -35,7 +33,7 @@ export class OtpController {
         })
       });
 
-      const mailApiresponse = await response.json();
+      const sendMailApiResponse = await response.json();
 
       if (response.ok) {
         await OtpLogs.create(
@@ -56,7 +54,7 @@ export class OtpController {
       } else {
         return res.status(response.status).json({
           message: "Failed to send OTP",
-          errors: mailApiresponse.errors || "An unexpected error occurred",
+          errors: sendMailApiResponse.errors || "An unexpected error occurred",
           status: response.status
         });
       }
@@ -68,13 +66,12 @@ export class OtpController {
           message: error.errors[0].message,
           status: 400
         });
-      } else {
-        return res.status(400).json({
-          message: "Failed to send OTP",
-          errors: error,
-          status: 400
-        });
       }
+      return res.status(400).json({
+        message: "Failed to send OTP",
+        errors: error,
+        status: 400
+      });
     }
   }
 }
