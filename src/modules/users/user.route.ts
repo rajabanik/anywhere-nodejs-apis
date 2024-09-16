@@ -4,6 +4,7 @@ import {
   userAccountCreation,
   getProfileDetails,
   updateProfilePhoto,
+  removeProfilePhoto,
   userLogin
 } from "./user.controller";
 
@@ -16,6 +17,8 @@ userRouter.get("/get-profile-details", getProfileDetails);
 userRouter.post("/create-account", userAccountCreation);
 
 userRouter.post("/update-profile-photo", file.single("file"), updateProfilePhoto);
+
+userRouter.delete("/remove-profile-photo",removeProfilePhoto);
 
 userRouter.post("/login", userLogin);
 

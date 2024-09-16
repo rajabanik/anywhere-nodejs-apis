@@ -16,7 +16,7 @@ import {
 import { sequelize } from "../../configs/db-connection.config";
 import UserRegistrations from "../../models/users/user-registrations.model";
 import UserMiscellaneousDetails from "../../models/users/user-miscellaneous-details.model";
-
+import { where } from "sequelize";
 
 initializeApp(firebaseConfig);
 
@@ -302,8 +302,93 @@ export const updateProfilePhoto = async (req: Request, res: Response) => {
   }
 };
 
+export const removeProfilePhoto = async (req: Request, res: Response) => {
+  const { userId } = req.query;
+
+  if (!userId || typeof userId !== "string") {
+    return res.status(400).json({
+      message: "Invalid or missing userId parameter",
+      status: 400,
+    });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const user = await UserRegistrations.findOne({
+      attributes: ["user_id", "username"],
+      include: [
+        {
+          model: UserMiscellaneousDetails,
+          attributes: ["profile_photo_storage_bucket_filepath"],
+          required: false,
+        },
+      ],
+      where: {
+        is_active: true,
+        user_id: userId,
+      },
+      transaction,
+    });
+
+    if (!user) {
+      await transaction.rollback();
+      return res.status(404).json({
+        message: "User not found",
+        status: 404,
+      });
+    }
+
+    const profilePhotoFilepath =
+      user.UserMiscellaneousDetail?.profile_photo_storage_bucket_filepath || null;
+
+    if (!profilePhotoFilepath) {
+      await transaction.rollback();
+      return res.status(404).json({
+        message: "Couldn't find profile picture",
+        status: 404,
+      });
+    }
+
+    const fileRef = ref(storage, profilePhotoFilepath);
+
+    try {
+      await deleteObject(fileRef);
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: "Failed to delete profile photo from storage",
+        status: 500,
+      });
+    }
+
+    await UserMiscellaneousDetails.update(
+      {
+        profile_photo_storage_bucket_filepath: null,
+      },
+      {
+        where: { user_id: userId },
+        transaction,
+      }
+    );
+
+    await transaction.commit();
+    return res.status(200).json({
+      message: "Profile photo removed successfully",
+      status: 200,
+    });
+  } catch (error) {
+    console.log(error);
+    await transaction.rollback();
+    return res.status(400).json({
+      message: "Failed to remove profile photo",
+      error: error,
+      status: 400,
+    });
+  }
+};
+
 export const userLogin = async (req: Request, res: Response) => {
-  
   const { email } = req.body;
 
   const transaction = await sequelize.transaction();
@@ -338,7 +423,6 @@ export const userLogin = async (req: Request, res: Response) => {
       },
       status: 200,
     });
-
   } catch (error) {
     console.log(error);
     await transaction.rollback();
